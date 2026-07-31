@@ -109,6 +109,17 @@
     border-radius: 8px; border: 1px solid #e0e3ea;
   }
   .howtoCaption { text-align: center; font-size: 11px; color: #999; margin-top: 6px; }
+  .faq {
+    background: #fff; border-radius: 10px; padding: 16px 18px; margin-top: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .faq h2 { font-size: 15px; margin-bottom: 4px; }
+  .faqGroup { font-size: 11px; font-weight: 600; color: #4f6ef7; margin: 14px 0 4px; }
+  .faq details { border-bottom: 1px solid #f0f1f4; padding: 7px 0; }
+  .faq summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #333; }
+  .faq summary:hover { color: #4f6ef7; }
+  .faq details p { font-size: 12px; color: #555; line-height: 1.9; margin: 6px 0 2px 14px; }
+  .faq a { color: #4f6ef7; }
   .appFooter { margin-top: 28px; border-top: 1px solid #e0e3ea; padding-top: 14px; }
   .terms-note {
     font-size: 12px; color: #555; background: #fdf6dc; border-radius: 8px;
@@ -155,6 +166,76 @@
     各カードに表示される切り抜き画像と読み取り結果を見比べて確認してください。結果は手で直接修正できます。<br>
     自動検出に失敗したときは、サムネイルか「範囲指定」ボタンからシリアル部分だけをドラッグで囲んで再読み取りしてください。
   </p>
+
+  <section class="faq">
+    <h2>よくある質問</h2>
+
+    <p class="faqGroup">アプリについて</p>
+    <details>
+      <summary>Q. シリアルが「使用済み」って出るんですけど？</summary>
+      <p>A. 本アプリは印字された文字を読み取るだけで、シリアルの使用・応募・有効性の確認は一切行っていません。「使用済み」は応募サイト側の表示で、既にそのシリアルで応募が済んでいる（ご自身で入力済み、または譲渡・購入品の場合は前の持ち主が使用済み）ことを意味します。本アプリで読み取ってもシリアルが消費されることはありません。</p>
+    </details>
+    <details>
+      <summary>Q. これで応募まで自動でやってくれるの？</summary>
+      <p>A. やりません。読み取ってテキスト化するまでが本アプリの役割です。応募はご自身で公式の応募サイトから行ってください。</p>
+    </details>
+    <details>
+      <summary>Q. これを使うと当選確率が上がりますか？</summary>
+      <p>A. 上がりません。手入力のミス防止と時短のためのツールです。</p>
+    </details>
+    <details>
+      <summary>Q. 間違って応募してしまった。取り消せますか？</summary>
+      <p>A. 本アプリからは何もできません。応募内容に関することは、すべて抽選の運営元へお問い合わせください。</p>
+    </details>
+    <details>
+      <summary>Q. これは公式アプリですか？</summary>
+      <p>A. いいえ。個人が制作した非公式のファンメイドツールで、アーティスト・レーベル・抽選運営とは一切関係ありません。</p>
+    </details>
+
+    <p class="faqGroup">安心・安全について</p>
+    <details>
+      <summary>Q. シリアルを盗まれたりしませんか？</summary>
+      <p>A. 盗めません。画像もシリアルも外部に送信されず、すべてお使いの端末の中だけで処理されます。一度ページを開いた後なら機内モード（オフライン）でも動作するので、疑わしい方はぜひ試してください。詳しくは下の「外部に送信されていないことを自分で確認する方法」をご覧ください。</p>
+    </details>
+    <details>
+      <summary>Q. 読み取ったシリアルはどこかに保存されますか？</summary>
+      <p>A. どこにも保存されません。ページを閉じると読み取り結果は消えます。必要な分は「すべてコピー」や「CSVで保存」でお手元に控えてください。</p>
+    </details>
+    <details>
+      <summary>Q. Windows版（exe）を開いたらウイルスの警告が出ました</summary>
+      <p>A. 署名のない無料配布アプリに対してWindowsが標準で表示する警告（SmartScreen）です。「詳細情報」→「実行」で起動できます。気になる方はインストール不要のWeb版（このページ）をご利用ください。</p>
+    </details>
+
+    <p class="faqGroup">使い方について</p>
+    <details>
+      <summary>Q. アプリストアに見つかりません。インストールはどうやるの？</summary>
+      <p>A. インストールは不要です。このページをブラウザで開くだけで使えます。よく使う方はブラウザのメニューから「ホーム画面に追加」しておくと便利です。</p>
+    </details>
+    <details>
+      <summary>Q. iPhoneでも使えますか？</summary>
+      <p>A. 使えます。SafariなどのブラウザでこのページのURLを開くだけです。AndroidもPCも同様です。</p>
+    </details>
+    <details>
+      <summary>Q. 読み取ってくれない・変な文字になります</summary>
+      <p>A. 明るい場所で、真上から、シリアル部分にピントを合わせて撮り直してみてください。影や光の反射がシリアルにかからないようにするのがコツです。それでもダメな場合は「範囲指定で追加」からシリアル部分だけをドラッグで囲むと読み取れます。</p>
+    </details>
+    <details>
+      <summary>Q. 読み取り結果が間違っていたんですけど！</summary>
+      <p>A. OCR（文字認識）の性質上、誤読を完全になくすことはできません。だからこそ怪しい文字には「要確認: ◯文字目」と表示しています。<strong>応募前に切り抜き画像と見比べて確認することは利用者の義務です（利用規約第3条）。</strong>確認せずに応募した結果について、作者は責任を負えません。</p>
+    </details>
+    <details>
+      <summary>Q. お金はかかりますか？</summary>
+      <p>A. 無料です。通信量も初回の約20MBだけで、2回目以降はほぼかかりません。</p>
+    </details>
+    <details>
+      <summary>Q. 他のCD・イベントのシリアルも読めますか？</summary>
+      <p>A. 「9桁の英数字」のシリアルであれば読める可能性が高いですが、動作保証はありません。読めたらラッキーくらいでお試しください。</p>
+    </details>
+    <details>
+      <summary>Q. フリマで買ったシリアル画像や、他人のチケットも読めますか？</summary>
+      <p>A. ご自身が正当に所有するチケット以外の読み取りは<a href="terms.html">利用規約</a>で禁止しています。他人のシリアルを無断で取得・使用する行為は犯罪になり得ます。絶対にやめてください。</p>
+    </details>
+  </section>
 
   <footer class="appFooter">
     <p class="terms-note">
