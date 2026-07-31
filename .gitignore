@@ -5,3 +5,4 @@ dist/
 *.jpeg
 *.png
 !sample.jpg
+!ogp.jpg
