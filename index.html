@@ -49,9 +49,17 @@
     object-position: left center; background: #fff; border: 1px solid #eee;
     border-radius: 4px;
   }
+  .rowBtns { display: flex; gap: 6px; margin-left: auto; }
   .rowDel {
-    padding: 4px 9px; font-size: 12px; color: #999; border-color: #e0e3ea;
+    padding: 7px 10px; font-size: 12px; color: #b45309; border-color: #ecd9c0;
   }
+  .cardStatus.busy::before {
+    content: ''; display: inline-block; width: 12px; height: 12px;
+    border: 2px solid #c5cdf7; border-top-color: #4f6ef7; border-radius: 50%;
+    margin-right: 7px; vertical-align: -2px;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .serial {
     font-family: "SF Mono", Consolas, monospace; font-size: 20px; letter-spacing: 3px;
     border: 1px solid #d6d9e0; border-radius: 6px; padding: 5px 10px;
@@ -61,7 +69,7 @@
   .serial.warn { border-color: #e0a020; background: #fffbf0; }
   .serial.ng { border-color: #e07020; background: #fff8f2; }
   .serial.dup { border-color: #d93025; background: #fdf0ef; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; white-space: nowrap; display: inline-block; }
   .badge.ok { background: #e6f4ea; color: #1e7e34; }
   .badge.warn { background: #fdf6dc; color: #9a7b0a; }
   .badge.ng { background: #fdecdb; color: #b45309; }
@@ -298,6 +306,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

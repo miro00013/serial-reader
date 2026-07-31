@@ -744,7 +744,7 @@ function makeCard(item) {
     <div class="info">
       <div class="fname"></div>
       <div class="rows"></div>
-      <div class="cardStatus">読み取り中…</div>
+      <div class="cardStatus">順番待ち…</div>
     </div>
     <div class="btns">
       <button class="reCrop">範囲指定で追加</button>
@@ -768,8 +768,10 @@ function addRow(item, res) {
     <img class="strip" alt="">
     <input class="serial" spellcheck="false" autocomplete="off">
     <span class="badge"></span>
-    <button class="rowCopy">コピー</button>
-    <button class="rowDel" title="この行を削除">×</button>`;
+    <span class="rowBtns">
+      <button class="rowCopy">コピー</button>
+      <button class="rowDel" title="このシリアル行を削除">削除</button>
+    </span>`;
   const strip = el.querySelector('.strip');
   if (res.strip) strip.src = res.strip; else strip.style.display = 'none';
   const input = el.querySelector('.serial');
@@ -819,11 +821,12 @@ function updateThumb(item) {
   item.el.querySelector('.thumb').src = c.toDataURL();
 }
 
-function setCardStatus(item, text, isErr) {
+function setCardStatus(item, text, isErr, busy) {
   const s = item.el.querySelector('.cardStatus');
   s.textContent = text || '';
   s.style.display = text ? '' : 'none';
   s.classList.toggle('err', !!isErr);
+  s.classList.toggle('busy', !!busy);
 }
 
 function allRows() {
@@ -870,6 +873,7 @@ function enqueue(item) {
     try {
       item.status = 'processing';
       statusEl.textContent = `読み取り中… (${item.file.name})`;
+      setCardStatus(item, '読み取り中…（写真1枚あたり10〜30秒ほどかかります）', false, true);
       if (!item.bitmap) item.bitmap = await createImageBitmap(item.file);
       await getWorker();
       const results = await autoReadAll(item.bitmap);
@@ -894,13 +898,16 @@ function enqueue(item) {
 }
 
 function addFiles(files) {
+  let added = 0;
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     const item = { id: nextId++, file, bitmap: null, rows: [], status: 'pending' };
     items.push(item);
     makeCard(item);
     enqueue(item);
+    added++;
   }
+  if (added) toast(`${added}枚の写真を受け付けました。読み取りを開始します`);
   refreshBadges();
 }
 
@@ -1091,7 +1098,7 @@ $('cropOk').onclick = async () => {
   const s = normSel();
   const item = cropItem;
   modal.classList.remove('show');
-  setCardStatus(item, '範囲を読み取り中…');
+  setCardStatus(item, '範囲を読み取り中…', false, true);
   try {
     await getWorker();
     const res = await cropRead(item.bitmap, s.x, s.y, s.w, s.h);

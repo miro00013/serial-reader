@@ -1,6 +1,6 @@
 // Service Worker: 初回アクセス時に全ファイルをキャッシュし、以降は完全オフラインで動作します。
 // （機内モードでも読み取りできる＝外部にデータを送信していないことを、誰でも確認できます）
-const CACHE = 'serial-reader-v2';
+const CACHE = 'serial-reader-v3';
 const PRECACHE = [
   './',
   './index.html',
