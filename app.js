@@ -253,6 +253,13 @@ function findSerialLines(comps, imgW, imgH, opts) {
     for (const run of runs) {
       const n = run.length;
       if (n < 7 || n > 11) continue;
+      // serials are printed with wide letter-spacing; URLs and body text are
+      // tightly packed. Require the median inter-character gap to be a decent
+      // fraction of the character width, or this "line" is ordinary text.
+      const runMedW = median(run.map(m => m.w));
+      const edgeGaps = [];
+      for (let i = 1; i < n; i++) edgeGaps.push(run[i].x0 - run[i - 1].x1);
+      if (median(edgeGaps) < runMedW * 0.22) continue;
       const heights = run.map(m => m.h);
       const hMean = avg(heights);
       const hCv = Math.sqrt(avg(heights.map(v => (v - hMean) ** 2))) / hMean;
@@ -355,13 +362,31 @@ function compose(cand, srcFn) {
 
 const isDigit = ch => ch >= '0' && ch <= '9';
 // visually near-identical pairs — flag for manual verification when they compete
-const CONFUSABLE = [['0','o'], ['1','l'], ['1','i'], ['5','s'], ['2','z'], ['9','q'], ['9','g'], ['j','y'], ['j','i'], ['4','d']];
+const CONFUSABLE = [['0','o'], ['1','l'], ['1','i'], ['5','s'], ['2','z'], ['7','z'], ['6','0'], ['9','q'], ['9','g'], ['j','y'], ['j','i'], ['4','d']];
 
 // read one detected serial line with an ensemble:
 //  - line OCR of tight-composed binary + grayscale images (strong on letters)
 //  - per-character OCR of each box (strong on digits)
 // then confidence-weighted voting per character position.
 async function readLine(srcCanvas, bin, w, h, cand) {
+  // URL / body-text gate: OCR the raw region once WITHOUT a character
+  // whitelist. Degraded URL fragments can mimic a 9-glyph wide-spaced line,
+  // but punctuation and URL keywords give them away here — the whitelisted
+  // ensemble below would never see them.
+  {
+    const lh = cand.y1 - cand.y0 + 1;
+    const pad = Math.round(lh * 0.2);
+    const sx = Math.max(0, cand.x0 - pad), sy = Math.max(0, cand.y0 - pad);
+    const sw = Math.min(w - sx, (cand.x1 - cand.x0 + 1) + pad * 2);
+    const sh = Math.min(h - sy, lh + pad * 2);
+    const gc = regionToCanvas(srcCanvas, sx, sy, sw, sh, sw * (90 / sh), 90);
+    const wk = await getWorker();
+    await wk.setParameters({ tessedit_pageseg_mode: '7', tessedit_char_whitelist: '' });
+    const raw = (await wk.recognize(gc)).data.text || '';
+    const puncts = (raw.match(/[:\/\\.]/g) || []).length;
+    if (/https?|www|cdefgah|illit|official|\.net|\.jp|\.com/i.test(raw) || puncts >= 3) return null;
+  }
+
   if (cand.boxes.length !== 9) {
     // segmentation is off — best effort: OCR the raw line region
     const lc = binToCanvas(bin, w, h, cand.x0, cand.y0, cand.x1, cand.y1, 0.35, 100);
@@ -498,7 +523,7 @@ async function readLine(srcCanvas, bin, w, h, cand) {
     const hMaxAll = Math.max(...hs), hMinAll = Math.min(...hs);
     if (hMaxAll / hMinAll > 1.18) {
       const mid = (hMaxAll + hMinAll) / 2;
-      const toLetter = { '0': 'o', '5': 's', '2': 'z' };
+      const toLetter = { '0': 'o', '5': 's', '2': 'z', '7': 'z' };
       const toDigit = { 'o': '0', 's': '5', 'z': '2' };
       for (let i = 0; i < 9; i++) {
         if (boxes[i].dot) continue;
@@ -656,7 +681,7 @@ async function autoReadAll(bitmap) {
   found.sort((f, g) =>
     (Math.round(f.region.y0 / band) - Math.round(g.region.y0 / band)) ||
     (f.region.x0 - g.region.x0));
-  return found.map(f => f.res);
+  return found.map(f => { f.res.region = f.res.region || f.region; return f.res; });
 }
 
 // crop pipeline, used by manual selection, auto refine, and the tile sweep.
@@ -736,7 +761,7 @@ function makeCard(item) {
 
 function addRow(item, res) {
   const row = { serial: res.serial || '', quality: res.quality || 'check',
-                uncertain: res.uncertain || [], el: null };
+                uncertain: res.uncertain || [], region: res.region || null, el: null };
   const el = document.createElement('div');
   el.className = 'row';
   el.innerHTML = `
@@ -761,12 +786,37 @@ function addRow(item, res) {
   el.querySelector('.rowDel').onclick = () => {
     item.rows = item.rows.filter(r => r !== row);
     el.remove();
+    updateThumb(item);
     refreshBadges();
   };
   row.el = el;
   item.rows.push(row);
   item.el.querySelector('.rows').appendChild(el);
   return row;
+}
+
+// redraw the card thumbnail with green boxes around every serial already read,
+// so tickets that were missed stand out at a glance
+function updateThumb(item) {
+  if (!item.bitmap) return;
+  const bmp = item.bitmap;
+  const scale = 200 / bmp.width;
+  const c = document.createElement('canvas');
+  c.width = 200;
+  c.height = Math.max(1, Math.round(bmp.height * scale));
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  ctx.strokeStyle = '#1e9e50';
+  ctx.lineWidth = 3;
+  for (const r of item.rows) {
+    if (!r.region) continue;
+    const pad = 5;
+    ctx.strokeRect(
+      r.region.x0 * scale - pad, r.region.y0 * scale - pad,
+      (r.region.x1 - r.region.x0) * scale + pad * 2,
+      (r.region.y1 - r.region.y0) * scale + pad * 2);
+  }
+  item.el.querySelector('.thumb').src = c.toDataURL();
 }
 
 function setCardStatus(item, text, isErr) {
@@ -825,8 +875,11 @@ function enqueue(item) {
       const results = await autoReadAll(item.bitmap);
       item.status = 'done';
       for (const res of results) addRow(item, res);
+      updateThumb(item);
       setCardStatus(item,
-        results.length ? '' : '自動検出できませんでした。「範囲指定で追加」から読み取ってください',
+        results.length
+          ? '読み取れた場所はサムネイルに緑枠で表示されます。枠のないチケットは「範囲指定で追加」から読み取ってください'
+          : '自動検出できませんでした。「範囲指定で追加」から読み取ってください',
         !results.length);
       refreshBadges();
     } catch (e) {
@@ -886,6 +939,15 @@ async function openCrop(item) {
 
 function drawCrop() {
   cctx.drawImage(cropItem.bitmap, 0, 0, cropCanvas.width, cropCanvas.height);
+  // show what's already been read (green), so the user can target the rest
+  cctx.strokeStyle = 'rgba(30,158,80,0.9)';
+  cctx.lineWidth = 2;
+  for (const r of (cropItem.rows || [])) {
+    if (!r.region) continue;
+    cctx.strokeRect(r.region.x0 * cropScale - 3, r.region.y0 * cropScale - 3,
+      (r.region.x1 - r.region.x0) * cropScale + 6,
+      (r.region.y1 - r.region.y0) * cropScale + 6);
+  }
   if (sel) {
     cctx.save();
     cctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -949,6 +1011,7 @@ $('cropOk').onclick = async () => {
       s.x / cropScale, s.y / cropScale, s.w / cropScale, s.h / cropScale);
     setCardStatus(item, '');
     addRow(item, res || { serial: '', quality: 'check' });
+    updateThumb(item);
     refreshBadges();
   } catch (e) {
     console.error(e);
