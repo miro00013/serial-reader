@@ -17,7 +17,7 @@
     "appId": "local.serial.reader",
     "productName": "SerialReader",
     "artifactName": "SerialReader.exe",
-    "files": ["main.js", "index.html", "vendor/**"],
+    "files": ["main.js", "index.html", "sample.jpg", "vendor/**"],
     "win": {
       "target": "portable"
     }

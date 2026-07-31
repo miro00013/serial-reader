@@ -93,6 +93,17 @@
   }
   .toast.show { opacity: 1; }
   .tips { font-size: 12px; color: #888; margin-top: 20px; line-height: 1.7; }
+  .howto {
+    background: #fff; border-radius: 10px; padding: 16px 18px; margin-top: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .howto h2 { font-size: 15px; margin-bottom: 8px; }
+  .howto ol { padding-left: 20px; font-size: 13px; color: #444; line-height: 1.9; }
+  .howtoImg {
+    display: block; max-width: 320px; width: 100%; margin: 12px auto 0;
+    border-radius: 8px; border: 1px solid #e0e3ea;
+  }
+  .howtoCaption { text-align: center; font-size: 11px; color: #999; margin-top: 6px; }
   .appFooter { margin-top: 28px; border-top: 1px solid #e0e3ea; padding-top: 14px; }
   .disclaimer { font-size: 11px; color: #999; line-height: 1.8; }
   .disclaimer strong { color: #777; }
@@ -111,6 +122,18 @@
     <p>またはクリックしてファイルを選択</p>
     <input type="file" id="fileInput" accept="image/*" multiple hidden>
   </div>
+
+  <section class="howto">
+    <h2>使い方</h2>
+    <ol>
+      <li>下のサンプルのように、シリアルチケットを重ならないように並べて撮影します（<strong>1枚の写真につき1〜9枚</strong>の読み取りに対応）</li>
+      <li>撮った写真を上の枠にドロップ（複数の写真をまとめてもOK）</li>
+      <li>シリアルナンバーが自動でテキスト化されます。「要確認: ◯文字目」が付いた行だけ、切り抜き画像と見比べて確認・修正してください</li>
+      <li>「すべてコピー」または「CSVで保存」でまとめて取り出せます</li>
+    </ol>
+    <img src="sample.jpg" alt="チケットを3×3に並べて撮影したサンプル写真" class="howtoImg" loading="lazy">
+    <p class="howtoCaption">撮影例: このように並べて、真上から明るい場所で撮ると読み取り精度が上がります</p>
+  </section>
 
   <div id="status"></div>
   <div id="list"></div>
