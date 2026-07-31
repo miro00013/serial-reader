@@ -218,6 +218,27 @@ function findSerialLines(comps, imgW, imgH, opts) {
     // ≥ ~0.58× the tallest one; label glyphs are ≤ ~0.45×)
     const tallest = Math.max(...ms.map(m => m.h));
     ms = ms.filter(m => m.h >= tallest * 0.5).sort((a, b) => a.x0 - b.x0);
+    // merge glyph fragments: adjacent boxes with almost no horizontal gap are
+    // pieces of one broken character (e.g. an m split in half by binarization)
+    {
+      const medW0 = median(ms.map(m => m.w));
+      const joined = [];
+      for (const m of ms) {
+        const prev = joined[joined.length - 1];
+        if (prev && m.x0 - prev.x1 < medW0 * 0.15) {
+          prev.x1 = Math.max(prev.x1, m.x1);
+          prev.y0 = Math.min(prev.y0, m.y0);
+          prev.y1 = Math.max(prev.y1, m.y1);
+          prev.w = prev.x1 - prev.x0 + 1;
+          prev.h = prev.y1 - prev.y0 + 1;
+          prev.area += m.area;
+          prev.dot = prev.dot || m.dot;
+        } else {
+          joined.push({ ...m });
+        }
+      }
+      ms = joined;
+    }
     // dot rescue: i/j dots are too small for the character filter above, so
     // pull them back in from the raw component list — any small blob sitting
     // directly above a box belongs to it
@@ -578,7 +599,7 @@ const isAutoAcceptable = r =>
 // sweep hits often clean up completely on the second, tighter pass
 async function refineRegion(bitmap, region) {
   const rw = region.x1 - region.x0, rh = region.y1 - region.y0;
-  const padX = rw * 0.06 + 8, padY = rh * 0.7 + 8;
+  const padX = rw / 9 * 1.5 + 8, padY = rh * 0.7 + 8;
   const sx = Math.max(0, region.x0 - padX), sy = Math.max(0, region.y0 - padY);
   const sw = Math.min(bitmap.width - sx, rw + padX * 2);
   const sh = Math.min(bitmap.height - sy, rh + padY * 2);
@@ -603,8 +624,10 @@ async function autoReadAll(bitmap) {
       if (found.some(f => regionsOverlap(f.region, region))) continue;
       let res = null;
       if (scale < 1) {
-        // refine: re-read the detected line region at full photo resolution
-        const padX = (cand.x1 - cand.x0) * 0.05 + 8;
+        // refine: re-read the detected line region at full photo resolution.
+        // pad by ~1.5 character pitches so an edge character the coarse pass
+        // missed comes back into view for the re-detection
+        const padX = (cand.x1 - cand.x0) / 9 * 1.5 + 8;
         const padY = (cand.y1 - cand.y0) * 0.7 + 8;
         const sx = Math.max(0, (cand.x0 - padX) / scale);
         const sy = Math.max(0, (cand.y0 - padY) / scale);
