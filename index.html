@@ -96,7 +96,8 @@
   #modal.show { display: flex; }
   #modal .hint { color: #fff; font-size: 14px; margin-bottom: 10px; }
   #cropCanvas { max-width: 100%; max-height: 70vh; background: #222; cursor: crosshair; touch-action: none; border-radius: 6px; }
-  #modal .mbtns { display: flex; gap: 10px; margin-top: 14px; }
+  #modal .mbtns { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+  #zoomIn, #zoomOut { min-width: 44px; font-size: 16px; font-weight: 700; }
   .toast {
     position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
     background: #1a1a2e; color: #fff; padding: 8px 18px; border-radius: 20px;
@@ -284,9 +285,12 @@
 </div>
 
 <div id="modal">
-  <p class="hint">シリアルナンバーの部分をドラッグで囲んでください</p>
+  <p class="hint">2本指ピンチで拡大・移動、1本指（ドラッグ）でシリアル部分を囲んでください</p>
   <canvas id="cropCanvas"></canvas>
   <div class="mbtns">
+    <button id="zoomOut" title="縮小">−</button>
+    <button id="zoomIn" title="拡大">＋</button>
+    <button id="zoomReset">全体</button>
     <button class="primary" id="cropOk" disabled>この範囲を読み取る</button>
     <button id="cropCancel">キャンセル</button>
   </div>
