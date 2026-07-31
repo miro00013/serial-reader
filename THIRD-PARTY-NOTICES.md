@@ -20,10 +20,5 @@
 - License: Apache License 2.0
 - 同梱ファイル: `vendor/lang/eng.traineddata.gz`
 
-## Electron（デスクトップ版のみ）
-
-- https://github.com/electron/electron
-- License: MIT License
-
 各ライセンスの全文は上記リポジトリを参照してください。
 Apache License 2.0 全文: https://www.apache.org/licenses/LICENSE-2.0
