@@ -1081,9 +1081,10 @@ function zoomAtCenter(factor) {
   drawCrop();
   updateOkState();
 }
-$('zoomIn').onclick = () => zoomAtCenter(1.5);
-$('zoomOut').onclick = () => zoomAtCenter(1 / 1.5);
-$('zoomReset').onclick = () => { zoom = 1; clampView(); drawCrop(); updateOkState(); };
+// null-guarded so an html/js version mismatch can never kill the whole script
+if ($('zoomIn')) $('zoomIn').onclick = () => zoomAtCenter(1.5);
+if ($('zoomOut')) $('zoomOut').onclick = () => zoomAtCenter(1 / 1.5);
+if ($('zoomReset')) $('zoomReset').onclick = () => { zoom = 1; clampView(); drawCrop(); updateOkState(); };
 
 $('cropCancel').onclick = () => { modal.classList.remove('show'); cropItem = null; };
 $('cropOk').onclick = async () => {
