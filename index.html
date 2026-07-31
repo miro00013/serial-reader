@@ -82,7 +82,13 @@
     align-items: center; gap: 12px; justify-content: center; z-index: 50;
   }
   #summary.show { display: flex; }
-  #count { font-size: 13px; color: #555; }
+  #count { font-size: 13px; color: #555; white-space: nowrap; }
+  @media (max-width: 640px) {
+    #summary { padding: 8px 10px; gap: 8px; }
+    #summary.show { flex-wrap: wrap; }
+    #count { flex-basis: 100%; text-align: center; }
+    body { padding-bottom: 110px; }
+  }
   #modal {
     position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100;
     display: none; flex-direction: column; align-items: center; justify-content: center; padding: 16px;
