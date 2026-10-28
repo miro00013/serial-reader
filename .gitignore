@@ -6,3 +6,5 @@ dist/
 *.png
 !sample.jpg
 !ogp.png
+# 精度評価用の写真と正解（実シリアルを含むので絶対にコミットしない）
+testdata/

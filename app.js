@@ -149,6 +149,12 @@ function findComponents(bin, w, h) {
   return comps;
 }
 
+// an i/j dot is a compact blob no wider than its glyph. The serial box's top
+// border also sits "directly above" the glyphs, and treating it as a dot used
+// to force 2/6/s/p into i/j and inflate box heights (misfiring the 2/z rule)
+const isDotShaped = (dot, glyph) =>
+  dot.w <= Math.max(3, glyph.w * 0.9) && dot.w <= dot.h * 2.5;
+
 // merge components whose x-ranges overlap (i/j dots with their stems)
 function mergeVertical(comps) {
   comps.sort((a, b) => a.x0 - b.x0);
@@ -165,7 +171,8 @@ function mergeVertical(comps) {
       // in this charset only i and j carry a dot
       const small = target.h <= c.h ? target : c;
       const big = target.h <= c.h ? c : target;
-      if (small.h < big.h * 0.6 && small.y1 <= big.y0 + small.h * 0.5) target.dot = true;
+      if (small.h < big.h * 0.6 && small.y1 <= big.y0 + small.h * 0.5 &&
+          isDotShaped(small, big)) target.dot = true;
       target.x0 = Math.min(target.x0, c.x0); target.x1 = Math.max(target.x1, c.x1);
       target.y0 = Math.min(target.y0, c.y0); target.y1 = Math.max(target.y1, c.y1);
       target.w = target.x1 - target.x0 + 1; target.h = target.y1 - target.y0 + 1;
@@ -245,8 +252,15 @@ function findSerialLines(comps, imgW, imgH, opts) {
     for (const m of ms) {
       for (const c of comps) {
         if (c.h >= m.h * 0.35 || c.h < 2 || c === m) continue;
+        if (!isDotShaped(c, m)) continue;
         const xOvl = Math.min(m.x1, c.x1) - Math.max(m.x0, c.x0);
         if (xOvl < Math.min(m.w, c.w) * 0.5) continue;
+        // a border line broken up by binarization leaves dot-sized pieces in a
+        // row; a real dot has no small neighbour at the same height
+        const inRow = comps.some(o => o !== c && o.h < m.h * 0.35 &&
+          Math.min(o.y1, c.y1) - Math.max(o.y0, c.y0) > 0 &&
+          Math.max(o.x0 - c.x1, c.x0 - o.x1) < m.w * 0.5);
+        if (inRow) continue;
         if (c.y1 <= m.y0 && m.y0 - c.y1 < m.h * 0.45) {
           m.y0 = Math.min(m.y0, c.y0);
           m.h = m.y1 - m.y0 + 1;
@@ -379,6 +393,26 @@ function compose(cand, srcFn) {
   uctx.fillStyle = '#fff'; uctx.fillRect(0, 0, up.width, up.height);
   uctx.drawImage(tc, 0, 0, up.width, up.height);
   return { canvas: up, xmap: xmap.map(m => ({ x0: m.x0 * sc, x1: m.x1 * sc })) };
+}
+
+// number of separate ink strokes crossing horizontal scanlines in the lower
+// half of a box (where m/n have only their vertical stems). Returns the count
+// most rows agree on, or 0 when the rows disagree (noise, broken strokes).
+function stemCount(bin, w, b) {
+  const counts = {};
+  let rows = 0;
+  for (let y = Math.round(b.y0 + b.h * 0.5); y <= b.y1 - b.h * 0.15; y++) {
+    let runs = 0, prev = 0;
+    for (let x = b.x0; x <= b.x1; x++) {
+      const v = bin[y * w + x];
+      if (v === 1 && prev === 0) runs++;
+      prev = v;
+    }
+    counts[runs] = (counts[runs] || 0) + 1;
+    rows++;
+  }
+  const best = Object.entries(counts).sort((a, c) => c[1] - a[1])[0];
+  return best && best[1] >= rows * 0.6 ? +best[0] : 0;
 }
 
 const isDigit = ch => ch >= '0' && ch <= '9';
@@ -535,6 +569,15 @@ async function readLine(srcCanvas, bin, w, h, cand) {
         .sort((a, b) => b[1] - a[1])[0];
       if (alt) chars[i] = alt[0];
       flag(i);
+    }
+    // stem rule: the serial font is monospaced, so m is squeezed to n's width
+    // and the LSTM reads it as n. Counting vertical strokes across the lower
+    // half of the glyph tells them apart (m: 3, n: 2).
+    for (let i = 0; i < 9; i++) {
+      if (chars[i] !== 'm' && chars[i] !== 'n') continue;
+      const stems = stemCount(bin, w, boxes[i]);
+      if (chars[i] === 'n' && stems === 3) { chars[i] = 'm'; flag(i); }
+      else if (chars[i] === 'm' && stems === 2) { chars[i] = 'n'; flag(i); }
     }
     // height-class rule: o/s/z are x-height glyphs while 0/5/2 are full-height,
     // and OCR alone cannot tell them apart (letters-only serials exist, so

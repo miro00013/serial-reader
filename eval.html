@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- 開発用の精度評価ページ。アプリ本体と同じく外部通信を CSP で遮断しています -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>精度評価 - serial-reader</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+         margin: 0; padding: 16px; background: #f4f5f8; color: #222; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  .panel { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+           box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .help { font-size: 13px; color: #555; line-height: 1.7; }
+  .help code { background: #f0f0f3; padding: 1px 5px; border-radius: 4px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button, label.btn { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 7px;
+           border: 1px solid #ccd; background: #fff; cursor: pointer; }
+  button.primary { background: #4f6ef7; color: #fff; border-color: #4f6ef7; }
+  button:disabled { opacity: .45; cursor: default; }
+  #loadInfo, #progress { font-size: 13px; color: #555; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .metric { border: 1px solid #e3e5ec; border-radius: 8px; padding: 8px 10px; }
+  .metric .k { font-size: 12px; color: #666; }
+  .metric .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .metric .d { font-size: 12px; font-variant-numeric: tabular-nums; }
+  .metric.bad .v { color: #c62828; }
+  .d.up { color: #1e9e50; } .d.down { color: #c62828; } .d.same { color: #888; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+  th { color: #666; font-weight: 500; }
+  .mono { font-family: Consolas, "Courier New", monospace; font-size: 15px; letter-spacing: 1px; }
+  .wrong { background: #ffcdd2; color: #b71c1c; font-weight: 700; }
+  .flag { text-decoration: underline wavy #e6a100; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
+  .t-ok { background: #e3f6ea; color: #1e7a42; }
+  .t-check { background: #fff4d6; color: #8a6200; }
+  .t-danger { background: #c62828; color: #fff; }
+  .t-miss { background: #eceff1; color: #455a64; }
+  .t-fp { background: #fde7e7; color: #b71c1c; }
+  .file { display: grid; grid-template-columns: 240px 1fr; gap: 14px; }
+  .file img { width: 240px; border-radius: 6px; }
+  .file h3 { font-size: 14px; margin: 0 0 6px; word-break: break-all; }
+  .file .time { font-size: 12px; color: #888; font-weight: 400; }
+  @media (max-width: 640px) { .file { grid-template-columns: 1fr; } }
+  /* app.js が参照する要素のダミー置き場 */
+  #appStub { display: none; }
+</style>
+</head>
+<body>
+<h1>精度評価</h1>
+
+<div class="panel help">
+  正解付きの写真で自動読み取りの精度を測ります（開発用。写真も結果も外部には送信されません）。<br>
+  1. <code>testdata/</code> フォルダ（git管理外）に写真と正解ファイル <code>answers.csv</code> を置く<br>
+  2. 正解ファイルの形式は <code>ファイル名,シリアル</code> を1行1件。アプリの「CSVで保存」で出したファイルを手で直したものがそのまま使えます。
+     1枚に複数枚のチケットがあれば行を分けて書いてください。<code>写真名,</code>（シリアル空欄）は「シリアルなし（何も検出しないのが正解）」の意味です<br>
+  3. 下のボタンでフォルダごと選ぶか、写真と正解ファイルをまとめて選んで「評価を実行」<br>
+  記号の見方: <span class="mono"><span class="wrong">x</span></span> = 誤読した文字、<span class="mono flag">x</span> = アプリが「要確認」を出した文字。
+  「OKなのに誤り」がいちばん危険な指標です（利用者が気づけない誤読）。
+</div>
+
+<div class="panel">
+  <div class="controls">
+    <label class="btn">フォルダを選ぶ<input type="file" id="dirInput" webkitdirectory multiple hidden></label>
+    <label class="btn">ファイルを選ぶ<input type="file" id="filesInput" multiple accept="image/*,.csv,.txt" hidden></label>
+    <button class="primary" id="runBtn" disabled>評価を実行</button>
+    <button id="stopBtn" disabled>中止</button>
+    <button id="saveBtn" disabled>結果をJSONで保存</button>
+    <span id="loadInfo"></span>
+  </div>
+  <div id="progress" style="margin-top:8px"></div>
+</div>
+
+<div class="panel" id="summaryPanel" hidden>
+  <div class="metrics" id="metrics"></div>
+  <div id="confusionWrap" style="margin-top:14px"></div>
+</div>
+
+<div id="files"></div>
+
+<!-- app.js はトップレベルでこれらの要素を参照するため、空のダミーを用意する -->
+<div id="appStub">
+  <div id="drop"></div><input type="file" id="fileInput">
+  <div id="status"></div><div id="list"></div>
+  <div id="summary"><span id="count"></span>
+    <button id="copyAll"></button><button id="downloadCsv"></button><button id="clearAll"></button></div>
+  <div id="modal"><canvas id="cropCanvas"></canvas>
+    <button id="cropOk"></button><button id="cropCancel"></button></div>
+  <div id="toast"></div>
+</div>
+
+<script src="vendor/tesseract.min.js"></script>
+<script src="app.js"></script>
+<script src="eval-app.js"></script>
+</body>
+</html>
